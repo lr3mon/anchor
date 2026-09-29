@@ -1,7 +1,7 @@
 import Foundation
 
 /// 결정(decision) 하나.
-public struct Decision: Equatable, Sendable {
+public struct Decision: Equatable, Sendable, Identifiable {
     public var id: Int64
     public var project: String
     public var title: String
@@ -58,7 +58,7 @@ public struct Decision: Equatable, Sendable {
 }
 
 /// 대안 비교 항목. 선택 안 한 쪽을 버리지 않고 남기는 게 이 도구의 존재 이유다.
-public struct Alternative: Equatable, Sendable {
+public struct Alternative: Equatable, Sendable, Identifiable {
     public var id: Int64
     public var decisionID: Int64
     public var option: String
@@ -72,7 +72,7 @@ public struct Alternative: Equatable, Sendable {
 }
 
 /// 회고(회고 세션) — 기간 단위로 묶은 결정들.
-public struct Retro: Equatable, Sendable {
+public struct Retro: Equatable, Sendable, Identifiable {
     public var id: Int64
     public var project: String
     public var title: String

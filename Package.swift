@@ -10,6 +10,7 @@ let package = Package(
     targets: [
         // 로직은 library 로 분리한다. executableTarget 은 @testable import 가
         // 되지 않아 테스트를 붙일 수 없으므로, 같은 소스를 쓰는 core 타깃을 둔다.
+        // 메뉴바 앱(GUI) 도 이 core 를 재사용한다.
         .target(
             name: "AnchorCore",
             path: "Sources/AnchorCore"
