@@ -8,12 +8,18 @@ macOS 전용. 외부 의존성 없음(system `libsqlite3` 사용), 설치하면 
 
 ```bash
 # Homebrew (권장)
-brew install lr3mon/tap/anchor
+brew tap lr3mon/tap
+brew install anchor
 
-# 또는 직접
-curl -fsSL https://raw.githubusercontent.com/lr3mon/tap/main/install.sh | bash
-anchor --help
+# 또는 직접 설치
+curl -fsSL https://raw.githubusercontent.com/lr3mon/homebrew-tap/main/install.sh | bash
+
+# 업데이트 / 삭제
+brew upgrade anchor
+brew uninstall anchor
 ```
+
+Apple Silicon (arm64) 전용입니다. 릴리스: https://github.com/lr3mon/anchor/releases
 
 ## 쓰기
 
