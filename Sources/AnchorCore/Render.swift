@@ -92,4 +92,66 @@ public enum Render {
         }
         return s
     }
+
+    /// 집계 출력. GUI 대시보드와 같은 Stats 를 그린다.
+    public static func stats(_ s: Stats) -> String {
+        var out = ""
+
+        // 헤드라인
+        out += Out.bold("\(s.streak)일 연속") + Out.dim("  ·  ") +
+               Out.bold("\(s.thisWeek)건") + Out.dim(" 최근 7일  ·  ") +
+               Out.bold("\(s.total)건") + Out.dim(" 전체") + "\n"
+
+        // 주간 추세
+        if s.weekTrend != 0 {
+            let up = s.weekTrend > 0
+            let mark = up ? "▲" : "▼"
+            let color = up ? Out.green : Out.yellow
+            out += Out.dim("  ") + color("\(mark) \(abs(s.weekTrend))") +
+                   Out.dim(" 저번 주 대비") + "\n"
+        }
+        if let last = s.daysSinceLast {
+            out += Out.dim("  마지막 기록 ") +
+                   (last == 0 ? Out.green("오늘") : Out.dim("\(last)일 전")) + "\n"
+        }
+
+        // 일별 활동 바
+        out += "\n" + Out.dim("최근 \(s.days.count)일  ") +
+               activityBars(s.days, peak: s.peak) + "\n"
+
+        // 상태 분포
+        if !s.byStatus.isEmpty {
+            out += "\n" + Out.dim("상태  ")
+            for sc in s.byStatus {
+                out += Out.dim("\(sc.status.label) \(sc.count)  ")
+            }
+            out += "\n"
+        }
+
+        // 자주 기록한 주제
+        if !s.topTags.isEmpty {
+            out += "\n" + Out.dim("자주 기록한 주제  ")
+            out += s.topTags.map { Out.blue("#\($0.tag)(\($0.count))") }
+                .joined(separator: "  ") + "\n"
+        }
+        return out
+    }
+
+    /// 일별 활동을 한 줄 막대로. 가장 최근 날이 오른쪽.
+    private static func activityBars(_ days: [Stats.Day], peak: Int) -> String {
+        guard peak > 0 else { return Out.dim("(기록 없음)") }
+        let blocks = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"]
+        var line = ""
+        for d in days {
+            if d.count == 0 {
+                line += Out.dim("·")
+            } else {
+                // 0 은 최소 1칸(▁) 으로. 기록이 있다는 게 보이도록.
+                let ratio = Double(d.count) / Double(peak)
+                let idx = min(blocks.count - 1, max(0, Int(ratio * Double(blocks.count - 1))))
+                line += Out.cyan(blocks[idx])
+            }
+        }
+        return line
+    }
 }

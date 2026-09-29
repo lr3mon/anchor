@@ -17,10 +17,19 @@ struct MenuBarView: View {
             } else if model.isRetroOpen {
                 RetroView(model: model)
             } else {
-                listView
+                VStack(spacing: 0) {
+                    // 대시보드는 기록이 있을 때만 의미가 있다.
+                    if model.stats.total > 0 {
+                        DashboardView(stats: model.stats)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 11)
+                        Divider()
+                    }
+                    listView
+                }
             }
         }
-        .frame(width: 400, height: 520)
+        .frame(width: 400, height: 560)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 

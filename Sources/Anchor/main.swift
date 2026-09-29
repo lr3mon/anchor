@@ -62,6 +62,8 @@ struct Anchor {
             return try cmdAlt(args, argv, store)
         case "retro":
             return try cmdRetro(args, store, proj)
+        case "stats":
+            return try cmdStats(args, store)
         case "note":
             return try cmdNote(args, store, proj)
         case "projects", "p":
@@ -274,6 +276,15 @@ struct Anchor {
         let retros = try store.retros(project: project, limit: 5)
         Out.print(Render.retro(days: days, project: project,
                               decisions: decisions, retros: retros))
+        return 0
+    }
+
+    /// 집계 출력. GUI 대시보드가 보여주는 값을 터미널에서도 확인할 수 있게 한다.
+    static func cmdStats(_ a: Args, _ store: Store) throws -> Int32 {
+        let days = a.int("days", default: 28)
+        let project = a.str("project")
+        let s = try store.stats(days: days, project: project)
+        Out.print(Render.stats(s))
         return 0
     }
 

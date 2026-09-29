@@ -42,6 +42,9 @@ final class AppModel {
         self.store = store
     }
 
+    /// 집계. 대시보드와 메뉴바 아이콘이 함께 쓴다.
+    var stats = Stats()
+
     /// 데이터가 바뀔 때 호출. 메뉴바 아이콘 숫자 갱신용.
     var onChange: (() -> Void)?
 
@@ -54,15 +57,24 @@ final class AppModel {
     func reload() {
         do {
             // 앱이 시작된 위치(작업 디렉터리) 기준으로 git 저장소를 찾는다.
-            // 사용자는 앱을 어느 저장소에서 띄우든 그 프로젝트로 기록되길 원한다.
             let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
             let detected = ProjectRef.detect(cwd: cwd)?.name
-            projects = (try store.projects()).sorted()
-            // 감지된 프로젝트가 목록에 없으면 새 프로젝트로 추가한다.
-            if let d = detected, !projects.contains(d) { projects.append(d) }
-            if !projects.isEmpty { projects.sort() }
-            currentProject = detected ?? currentProject ?? projects.first
+            let known = try store.projects()
+            // 감지된 프로젝트에 실제 기록이 있을 때만 기본 선택한다.
+            // (기록 없는 디렉터리에서 띄우면 목록이 비어 보이기 때문)
+            projects = known
+            let usable = detected.flatMap { known.contains($0) ? $0 : nil }
+            currentProject = usable ?? known.first
             refreshList()
+            refreshStats()
+        } catch {
+            errorMessage = String(describing: error)
+        }
+    }
+
+    func refreshStats() {
+        do {
+            stats = try store.stats(days: 28, project: nil)
         } catch {
             errorMessage = String(describing: error)
         }

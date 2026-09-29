@@ -44,7 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover = NSPopover()
         popover.behavior = .transient
         popover.animates = false
-        popover.contentSize = NSSize(width: 400, height: 520)
+        popover.contentSize = NSSize(width: 400, height: 560)
         popover.contentViewController = NSHostingController(
             rootView: MenuBarView(model: model))
 
@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.environment["ANCHOR_UI_TEST"] == "1" {
             NSApp.setActivationPolicy(.regular)
             let panel = NSWindow(
-                contentRect: NSRect(x: 100, y: 100, width: 400, height: 520),
+                contentRect: NSRect(x: 100, y: 100, width: 400, height: 560),
                 styleMask: [.titled, .closable],
                 backing: .buffered, defer: false)
             panel.title = "anchor (UI test)"
@@ -133,17 +133,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// 메뉴바 아이콘을 현재 상태(오늘 기록 수)로 다시 그린다.
+    /// 메뉴바 아이콘을 현재 상태(오늘 기록 수 / 연속 기록)로 다시 그린다.
     private func refreshStatusItem() {
         guard let btn = statusItem.button else { return }
         let n = model.todayCount
-        btn.image = MenuBarIcon.make(count: n)
-        btn.toolTip = n > 0
-            ? "anchor · 오늘 \(n)건"
-            : "anchor · 오늘 기록 없음"
+        let streak = model.stats.streak
+        // 오늘 기록했으면 오늘 건수, 아니면 연속 기록을 보여준다.
+        // (둘 다 0 이면 닻만)
+        if n > 0 {
+            btn.image = MenuBarIcon.make(count: n)
+        } else {
+            btn.image = MenuBarIcon.makeStreak(streak)
+        }
         btn.image?.isTemplate = false
-        // 0 이면 숫자 없이 닻만, 있으면 닻 + 개수
-        if n > 0 { statusItem.length = 34 } else { statusItem.length = 22 }
+
+        var tip = "anchor"
+        if n > 0 { tip += " · 오늘 \(n)건" }
+        if streak > 0 { tip += " · \(streak)일 연속" }
+        if let last = model.stats.daysSinceLast, n == 0 {
+            tip += " · 마지막 기록 \(last == 0 ? "오늘" : "\(last)일 전")"
+        }
+        btn.toolTip = tip
+
+        let hasBadge = n > 0 || streak > 0
+        statusItem.length = hasBadge ? 34 : 22
     }
 
     private func show() {
