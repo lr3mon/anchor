@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AnchorCore
 
 /// 메뉴바 아이콘 + 팝오버 진입점.
 struct MenuBarView: View {

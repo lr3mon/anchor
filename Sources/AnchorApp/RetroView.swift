@@ -1,4 +1,5 @@
 import SwiftUI
+import AnchorCore
 
 /// 회고: 기간별 결정 묶음 + 빈도 높은 태그.
 struct RetroView: View {

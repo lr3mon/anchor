@@ -1,4 +1,5 @@
 import SwiftUI
+import AnchorCore
 
 /// 목록 한 행. 클릭하면 접혀 있던 상황/대안이 펼쳐진다.
 struct DecisionRow: View {

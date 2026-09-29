@@ -1,4 +1,5 @@
 import SwiftUI
+import AnchorCore
 
 /// 새 결정 기록 폼. "기각한 대안"을 여러 줄 직접 넣게 한다.
 struct NewDecisionForm: View {

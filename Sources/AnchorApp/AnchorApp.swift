@@ -1,23 +1,10 @@
 import SwiftUI
 import AppKit
-
-// 앱 타깃은 AnchorCore 소스를 함께 컴파일하므로(같은 Sources phase),
-// AnchorCore 는 독립 모듈이 아니다. 따라서 import AnchorCore 는 두지 않고
-// Store/Decision/TimeParser 같은 심볼을 소스 레벨에서 그대로 쓴다.
+import AnchorCore
 
 /// 메뉴바 전용 앱 진입점.
-/// LSUIElement = true 로 Dock 에는 안 뜨고 메뉴바 아이콘만 남는다.
-@main
-struct AnchorApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-
-    var body: some Scene {
-        // 메뉴바 앱이라 표준 창/메뉴는 쓰지 않는다. 실제 UI 는 AppDelegate 가
-        // NSPopover 로 직접 띄운다 (SwiftUI Scene 없이 동작).
-        Settings { EmptyView() }
-    }
-}
-
+/// NSApplication 을 직접 쓰므로 (RunFox 와 같은 방식) Xcode 프로젝트가 필요 없다.
+/// LSUIElement = true 는 Scripts/package.py 가 만드는 Info.plist 에 들어간다.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover!
@@ -30,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
             model = AppModel(store: try Store.open())
+            model.onChange = { [weak self] in self?.refreshStatusItem() }
             model.reload()
         } catch {
             // DB 를 못 열면 아무것도 못 하므로 조용히 종료하지 않는다.
@@ -39,12 +27,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // ── 메뉴바 ──
+        // SF Symbol 대신 직접 그린 픽셀 아트 닻을 쓴다. Assets/AnchorMenuBar.iconset
+        // 을 .icns 로 굽지 않고 NSImage 를 런타임에 그린다 (make_assets.py 와 같은 모양).
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let btn = statusItem.button {
-            btn.image = NSImage(systemSymbolName: "anchor", accessibilityDescription: "anchor")
-            btn.image?.isTemplate = true
+            let icon = MenuBarIcon.make(count: model.todayCount)
+            icon.isTemplate = false   // 아래에서 직접 색을 칠한다
+            btn.image = icon
             btn.target = self
             btn.action = #selector(toggle)
+            btn.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            refreshStatusItem()
         }
 
         // ── 팝오버 ──
@@ -140,14 +133,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// 메뉴바 아이콘을 현재 상태(오늘 기록 수)로 다시 그린다.
+    private func refreshStatusItem() {
+        guard let btn = statusItem.button else { return }
+        let n = model.todayCount
+        btn.image = MenuBarIcon.make(count: n)
+        btn.toolTip = n > 0
+            ? "anchor · 오늘 \(n)건"
+            : "anchor · 오늘 기록 없음"
+        btn.image?.isTemplate = false
+        // 0 이면 숫자 없이 닻만, 있으면 닻 + 개수
+        if n > 0 { statusItem.length = 34 } else { statusItem.length = 22 }
+    }
+
     private func show() {
         guard let btn = statusItem.button else { return }
         model.reload()          // 열 때마다 최신 상태로
+        refreshStatusItem()
         popover.show(relativeTo: btn.bounds, of: btn, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
     }
 
     private func close() {
         popover.performClose(nil)
+    }
+
+    /// 저장/삭제/상태변경 직후 호출. 메뉴바 숫자를 즉시 갱신한다.
+    func notifyDataChanged() {
+        refreshStatusItem()
     }
 }

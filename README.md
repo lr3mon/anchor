@@ -1,10 +1,25 @@
 # anchor
 
-결정 기록 + 회고 CLI. 왜 이렇게 정했는지 남겨두면 나중에 "이거 왜 이래?"가 안 생깁니다.
+결정 기록 + 회고. 왜 이렇게 정했는지 남겨두면 나중에 "이거 왜 이래?"가 안 생깁니다.
 
-macOS 전용. 외부 의존성 없음(system `libsqlite3` 사용), 설치하면 정적 바이너리 하나만 있으면 됩니다.
+macOS 전용. 외부 의존성 없음(system `libsqlite3` 사용). 메뉴바 앱과 CLI 가 같은
+`~/.anchor/decisions.db` 를 공유하므로 GUI 로 기록하고 터미널로 조회할 수 있습니다.
 
 ## 설치
+
+### 메뉴바 앱
+
+```bash
+# Releases 에서 Anchor-<버전>-macOS-arm64.zip 다운로드
+unzip Anchor-*.zip && open Anchor.app
+# 또는 직접 빌드해서 설치
+python3 Scripts/package.py --install
+```
+
+Dock 에는 안 뜨고 메뉴바 오른쪽에 닻 아이콘만 남습니다. 클릭하면 팝오버가 열립니다.
+자세한 내용은 [GUI.md](GUI.md) 참고.
+
+### CLI
 
 ```bash
 # Homebrew (권장)

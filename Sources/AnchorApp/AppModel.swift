@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AnchorCore
 
 /// 메뉴바 앱 전역 상태.
 /// SwiftUI @Observable 로 관찰하되, Store(DDL/SQLite) 접근은 여기서만 한다.
@@ -31,8 +32,21 @@ final class AppModel {
     var isRetroOpen = false
     var detailID: Int64?
 
+    /// 오늘 기록한 결정 수. 메뉴바 아이콘에 숫자로 보여준다.
+    var todayCount: Int {
+        let cal = Calendar.current
+        return decisions.filter { cal.isDateInToday($0.createdAt) }.count
+    }
+
     init(store: Store) {
         self.store = store
+    }
+
+    /// 데이터가 바뀔 때 호출. 메뉴바 아이콘 숫자 갱신용.
+    var onChange: (() -> Void)?
+
+    private func changed() {
+        onChange?()
     }
 
     // MARK: - 로드
@@ -105,6 +119,7 @@ final class AppModel {
             if !alts.isEmpty { try store.addAlternatives(alts, decisionID: id) }
             resetForm()
             reload()
+            changed()
         } catch {
             errorMessage = String(describing: error)
         }
@@ -118,7 +133,7 @@ final class AppModel {
     }
 
     func remove(_ id: Int64) {
-        do { try store.deleteDecision(id); reload() }
+        do { try store.deleteDecision(id); reload(); changed() }
         catch { errorMessage = String(describing: error) }
     }
 
@@ -129,6 +144,7 @@ final class AppModel {
             d.updatedAt = Date()
             try store.updateDecision(d)
             reload()
+            changed()
         } catch { errorMessage = String(describing: error) }
     }
 }

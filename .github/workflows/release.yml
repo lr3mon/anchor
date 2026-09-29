@@ -16,6 +16,8 @@ jobs:
         run: swift build
       - name: 테스트
         run: swift test
+      - name: 앱 타깃 빌드
+        run: swift build -c release --product AnchorApp
 
   release:
     needs: test
@@ -24,16 +26,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 릴리스 빌드 (arm64)
+      - name: Python 의존성
+        run: python3 -m pip install --upgrade Pillow
+
+      - name: CLI 릴리스 빌드 (arm64)
         run: swift build -c release --arch arm64
 
-      - name: 동작 확인
+      - name: 앱 번들 생성
+        run: python3 Scripts/package.py --version "${GITHUB_REF_NAME#v}"
+
+      - name: CLI 동작 확인
         run: |
           DB="$(mktemp -d)/t.db"
           .build/arm64-apple-macosx/release/anchor --db "$DB" new "CI 검증" --tags ci
           .build/arm64-apple-macosx/release/anchor --db "$DB" ls
 
-      - name: tar.gz 생성
+      - name: GUI 저장 경로 검증
+        run: |
+          DB="$(mktemp -d)/gui.db"
+          ANCHOR_SELFTEST=1 ANCHOR_SELFTEST_DB="$DB" dist/Anchor.app/Contents/MacOS/Anchor
+          .build/arm64-apple-macosx/release/anchor --db "$DB" show 1
+
+      - name: 번들 서명 확인
+        run: |
+          codesign --verify --deep --strict --verbose=2 dist/Anchor.app
+          plutil -lint dist/Anchor.app/Contents/Info.plist
+
+      - name: CLI tar.gz 생성
         run: |
           cd .build/arm64-apple-macosx/release
           tar -czf anchor-macos-arm64.tar.gz anchor
@@ -45,6 +64,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: |
+            dist/Anchor-*.zip
             .build/arm64-apple-macosx/release/anchor-macos-arm64.tar.gz
           generate_release_notes: true
 

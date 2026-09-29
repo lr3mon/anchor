@@ -1,21 +1,41 @@
 # anchor — GUI
 
-macOS 메뉴바에 떠서 쓰는 결정 기록 앱. CLI 와 같은 DB(`~/.anchor/decisions.db`)를
-공유하므로 GUI 로 기록하고 터미널로 조회하는 식으로 섞어 쓸 수 있다.
+macOS 메뉴바에서 쓰는 결정 기록 앱. CLI 와 같은 DB(`~/.anchor/decisions.db`)를 공유하므로
+GUI 로 기록하고 터미널로 조회하는 식으로 섞어 쓸 수 있습니다.
 
-## 빌드 & 실행
+## 설치 / 빌드
 
 ```bash
-# 빌드
-xcodebuild -project AnchorApp.xcodeproj -scheme AnchorApp \
-           -configuration Release build
+# 앱만 빌드하고 ~/Applications 에 설치
+python3 Scripts/package.py --install
 
-# 실행
-open ~/Library/Developer/Xcode/DerivedData/AnchorApp-*/Build/Products/Release/Anchor.app
+# 버전 지정 + 배포 zip 생성
+python3 Scripts/package.py --version 0.2.0
+# → dist/Anchor.app, dist/Anchor-0.2.0-macOS-arm64.zip
 ```
 
-`open` 으로 띄우면 Dock 에는 안 뜨고 메뉴바 오른쪽에 앵커 아이콘만 생깁니다.
+`open -a Anchor` 로 실행. Dock 에는 안 뜨고 메뉴바 오른쪽에 닻 아이콘만 남습니다.
 아이콘을 클릭하면 팝오버 패널이 열립니다.
+
+## Xcode 프로젝트가 없는 이유
+
+SwiftPM 은 `.app` 번들을 만들지 못합니다. 하지만 **Xcode 프로젝트가 필요하지는 않습니다.**
+
+`Scripts/package.py` 가 SwiftPM 으로 만든 바이너리를 `Contents/` 구조에 직접 조립하고
+Info.plist 를 쓰고 ad-hoc 서명합니다. 이 방식이 GitHub Actions 에서 그대로 돌아가므로
+앱도 자동 배포할 수 있습니다. (Xcode 프로젝트를 썼다면 앱 빌드는 로컬 전용이 됩니다.)
+
+RunFox 가 쓰는 방식과 같습니다.
+
+## 메뉴바 아이콘
+
+SF Symbol 대신 닻을 직접 픽셀로 그립니다 (`Sources/AnchorApp/MenuBarIcon.swift`).
+`Scripts/make_assets.py` 의 `anchor_sprite()` 와 같은 12x14 격자입니다.
+
+- 오늘 기록 0건: 닻만, 회색
+- 오늘 기록 있음: 닻 + 개수, 강조색
+
+저장/삭제/상태변경 시 `AppModel.onChange` → `refreshStatusItem()` 로 즉시 갱신됩니다.
 
 ## 기능
 
@@ -37,51 +57,36 @@ open ~/Library/Developer/Xcode/DerivedData/AnchorApp-*/Build/Products/Release/An
 Sources/
 ├── AnchorCore/    로직 (Store/Database/Model/Render) — CLI 와 앱이 공유
 ├── Anchor/        CLI 진입점
-└── AnchorApp/     SwiftUI 메뉴바 앱
-    ├── AnchorApp.swift   진입점, NSPopover, 상태아이콘
-    ├── AppModel.swift    @Observable 상태
-    ├── MenuBarView.swift 패널 골격
+└── AnchorApp/
+    ├── main.swift          NSApplication 진입점 (@main 아님)
+    ├── AnchorApp.swift     AppDelegate, NSPopover, 상태아이콘
+    ├── MenuBarIcon.swift   닻 픽셀 아트 렌더러
+    ├── AppModel.swift      @Observable 상태
+    ├── MenuBarView.swift   패널 골격
     ├── NewDecisionForm.swift  기록 폼
-    ├── DecisionRow.swift 목록 행
-    └── RetroView.swift  회고
+    ├── DecisionRow.swift      목록 행
+    └── RetroView.swift        회고
+Scripts/
+├── make_assets.py   앱 아이콘(.icns) 생성 — PIL 픽셀 아트
+└── package.py       .app 번들 조립 + ad-hoc 서명 + zip
 ```
 
-앱 타깃은 `AnchorCore` 소스를 함께 컴파일하므로 같은 타깃 안에서 심볼을 직접 쓴다.
-`import AnchorCore` 는 하지 않는다 (모듈이 아니므로). 테스트 타깃만 `@testable import`
-로 AnchorCore 를 쓴다.
-
-## Xcode 프로젝트가 필요한 이유
-
-SwiftPM 은 `.app` 번들을 만들지 못한다. 메뉴바 앱은 `NSApplication` + `NSPopover` 로
-직접 떠야 하므로 (SwiftUI `App` Scene 는 `LSUIElement` 조합에서 불안정) Info.plist 와
-번들 설정이 있는 Xcode 프로젝트가 반드시 필요하다.
-
-`AnchorApp.xcodeproj` 는 `Scripts/gen_xcodeproj.py` 가 생성한다. 소스 파일이
-추가되거나 이름이 바뀌면 스크립트를 다시 돌린다.
-
-```bash
-python3 Scripts/gen_xcodeproj.py
-```
-
-pbxproj 를 손으로 쓰지 않는 이유는, 이 프로젝트가 GitHub Actions 에서
-`swift build` 만 돌리면 앱을 빌드할 수 없기 때문이다. 앱 빌드는 로컬 전용이다.
+`AnchorApp` 는 `AnchorCore` 를 `import` 한다. Xcode 프로젝트로 묶지 않으므로
+일반 SwiftPM 모듈 경계를 그대로 쓴다.
 
 ## 검증 모드
 
 ```bash
+APP=dist/Anchor.app/Contents/MacOS/Anchor
+
 # 창을 띄워서 레이아웃 확인 (메뉴바 대신 일반 창)
-ANCHOR_UI_TEST=1 Anchor.app/Contents/MacOS/Anchor
+ANCHOR_UI_TEST=1 "$APP"
 
 # 저장 경로만 검증하고 종료 (창 조작 없이 AppModel.saveDraft 실행)
 cd ~/projects/개인/SaaS·앱/anchor
-ANCHOR_SELFTEST=1 ANCHOR_SELFTEST_DB=/tmp/t.db \
-  Anchor.app/Contents/MacOS/Anchor
-```
+ANCHOR_SELFTEST=1 ANCHOR_SELFTEST_DB=/tmp/t.db "$APP"
 
-`ANCHOR_SELFTEST` 는 폼을 채운 뒤 저장하고 DB 에 들어갔는지 확인한다.
-CLI 로 같은 DB 를 열어 교차 검증할 수 있습니다.
-
-```bash
+# 교차 검증
 anchor --db /tmp/t.db show 1
 ```
 
@@ -91,3 +96,5 @@ anchor --db /tmp/t.db show 1
   제대로 잡힙니다. Dock 에서 실행하면 마지막 프로젝트로 기록됩니다.
 - `testPanel` 은 반드시 strong reference 로 유지해야 합니다. 지역변수로 두면 ARC 가
   dealloc 하면서 AppKit 애니메이션 중 over-release 크래시가 납니다.
+- ad-hoc 서명이라 다른 Mac 으로 옮기면 Gatekeeper 가 물을 수 있습니다. 배포용으로는
+  Apple Developer 서명이 필요합니다.

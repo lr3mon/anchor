@@ -5,7 +5,10 @@ let package = Package(
     name: "anchor",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "anchor", targets: ["Anchor"])
+        .executable(name: "anchor", targets: ["Anchor"]),
+        // 메뉴바 앱. .app 번들은 Scripts/package.py 가 이 바이너리를 조립한다.
+        .executable(name: "AnchorApp", targets: ["AnchorApp"]),
+        .library(name: "AnchorCore", targets: ["AnchorCore"]),
     ],
     targets: [
         // 로직은 library 로 분리한다. executableTarget 은 @testable import 가
@@ -20,6 +23,12 @@ let package = Package(
             name: "Anchor",
             dependencies: ["AnchorCore"],
             path: "Sources/Anchor"
+        ),
+        // 메뉴바 앱. SwiftPM 으로 빌드하고 .app 번들은 package.py 가 만든다.
+        .executableTarget(
+            name: "AnchorApp",
+            dependencies: ["AnchorCore"],
+            path: "Sources/AnchorApp"
         ),
         .testTarget(
             name: "AnchorTests",
